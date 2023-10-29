@@ -1,6 +1,8 @@
 # expense_tracker
 
-A new Flutter project.
+A Flutter project for tracking your day to day expenses.
+
+- [Link to it's GitHub Repo](https://github.com/sharshv2012/expense_tracker)
 
 ## Getting Started
 
