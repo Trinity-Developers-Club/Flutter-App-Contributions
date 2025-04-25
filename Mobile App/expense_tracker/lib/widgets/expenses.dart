@@ -77,22 +77,40 @@ class _ExpensesState extends State<Expenses> {
       ),
     );
   }
+  void _editExpense(Expense oldExpense, Expense updatedExpense) {
+    final index = _registeredExpenses.indexOf(oldExpense);
+    if (index == -1) return;
+
+    setState(() {
+      _registeredExpenses[index] = updatedExpense;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final width = MediaQuery.of(context).size.width;
     // final height = MediaQuery.of(context).size.height; (no use)
 
-    Widget mainContent = const Center(
-      child: Text("No Expense Found. Start Adding Some!"),
-    );
-    if (_registeredExpenses.isNotEmpty) {
-      mainContent = ExpensesList(
-        // you can do this if you want to define a widget away from main tree.
-        expenses: _registeredExpenses,
-        onRemoveExpense: _removeExpense,
-      );
-    }
+    final mainContent = _registeredExpenses.isEmpty
+        ? const Center(child: Text("No expenses found. Start adding some!"))
+        : ExpensesList(
+            expenses: _registeredExpenses,
+            onRemoveExpense: _removeExpense,
+            onEditExpense: (oldExpense) {
+              showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                useSafeArea: true,
+                shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(25.0)),),
+                builder: (context) => NewExpense(
+                  onAddExpense: (updatedExpense) {
+                    _editExpense(oldExpense, updatedExpense);
+                  },
+                  existingExpense: oldExpense,
+                ),
+              );
+            },
+          );
     return Scaffold(
       appBar: AppBar(
         //backgroundColor: Colors.cyanAccent,

@@ -1,210 +1,191 @@
-
-
 import 'dart:io';
-
-import 'package:expense_tracker/models/expense.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:expense_tracker/models/expense.dart';
 
-final formatter = DateFormat('dd/MM/yyyy'); // for formatting date
+final formatter = DateFormat('dd/MM/yyyy');
 
 class NewExpense extends StatefulWidget {
-  const NewExpense({super.key, required this.onAddExpense}); 
-
-  final void Function(Expense expense) onAddExpense;
+  const NewExpense({
+    super.key,
+    required this.onAddExpense,
+    this.existingExpense,
+  });
+final void Function(Expense expense) onAddExpense;
+  final Expense? existingExpense;
 
   @override
-  State<StatefulWidget> createState() {
-    return _NewExpenseState();
-  }
+  State<NewExpense> createState() => _NewExpenseState();
 }
-
 class _NewExpenseState extends State<NewExpense> {
   final _titleController = TextEditingController();
   final _amountController = TextEditingController();
   DateTime? _selectedDate;
   Category _selectedCategory = Category.leisure;
-
-  void _presentDatePicker() async {
-    final now = DateTime.now();
-    final firstDate =
-        DateTime(now.year - 1, now.month, now.day); // previous possible date
-    final lastDate = now;
-
-    final pickedDate = await showDatePicker(
-        context: context,
-        initialDate: now,
-        firstDate: firstDate,
-        lastDate: lastDate);
-    setState(() {
-      _selectedDate = pickedDate;
-    });
+@override
+  void initState() {
+    super.initState();
+    // If editing an existing expense, pre-fill the form fields
+    if (widget.existingExpense != null) {
+      _titleController.text = widget.existingExpense!.title;
+      _amountController.text = widget.existingExpense!.amount.toString();
+      _selectedDate = widget.existingExpense!.date;
+      _selectedCategory = widget.existingExpense!.category;
+    }
   }
-
-  showAlertDialog() {
-    if (Platform.isIOS){
-        showCupertinoDialog(context: context, builder: (ctx) => CupertinoAlertDialog(
-              title: const Text("Invalid Input"),
-          content: const Text("Please make sure you have put valid details."),
+void _presentDatePicker() async {
+    final now = DateTime.now();
+    final firstDate = DateTime(now.year - 1, now.month, now.day);
+    final pickedDate = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate ?? now,
+      firstDate: firstDate,
+      lastDate: now,
+    );
+    setState(() => _selectedDate = pickedDate);
+  }
+void _showInvalidInputDialog() {
+    if (Platform.isIOS) {
+      showCupertinoDialog(
+        context: context,
+        builder: (ctx) => CupertinoAlertDialog(
+          title: const Text("Invalid Input"),
+          content: const Text("Please make sure all fields are valid."),
           actions: [
             TextButton(
-                onPressed: () {
-                  Navigator.pop(ctx);
-                },
-                child: const Text("Okay"))
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text("OK"),
+            ),
           ],
-          ),);
-    }else{
-        showDialog(
+        ),
+      );
+} else {
+      showDialog(
         context: context,
         builder: (ctx) => AlertDialog(
           title: const Text("Invalid Input"),
-          content: const Text("Please make sure you have put valid details."),
+          content: const Text("Please make sure all fields are valid."),
           actions: [
             TextButton(
-                onPressed: () {
-                  Navigator.pop(ctx);
-                },
-                child: const Text("Okay"))
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text("OK"),
+            ),
           ],
         ),
       );
     }
-      
   }
+void _submitExpenseData() {
+    final enteredAmount = double.tryParse(_amountController.text);
+    final isInvalid = _titleController.text.trim().isEmpty ||
+        enteredAmount == null ||
+        enteredAmount <= 0 ||
+        _selectedDate == null;
 
-  void _submitExpenseData() {
-    final enteredAmount = double.tryParse(_amountController
-        .text); // double.tryParse("hello") -> null , double.tryParse(10.45) -> 10.45
-    final amountIsInvalid = enteredAmount == null || enteredAmount <= 0;
-    if (_titleController.text.trim().isEmpty ||
-        amountIsInvalid ||
-        _selectedDate == null) {
-          showAlertDialog();
-         return;
+    if (isInvalid) {
+      _showInvalidInputDialog();
+      return;
     }
-
-    widget.onAddExpense( // if you want to use passed method or var to the class use widget keyword.
-      Expense(
-          title: _titleController.text,
-          amount: double.tryParse(_amountController.text)!,
-          date: _selectedDate!,
-          category: _selectedCategory
-        ),
+final expense = Expense(
+      title: _titleController.text.trim(),
+      amount: enteredAmount,
+      date: _selectedDate!,
+      category: _selectedCategory,
     );
-  }
 
-  @override
+    widget.onAddExpense(expense);
+    Navigator.pop(context);
+  }
+@override
   void dispose() {
-    // we'll have to delete the textEditingController after modal is not in use to free the memory.
     _titleController.dispose();
     _amountController.dispose();
     super.dispose();
   }
-
-  // var _enteredTitle = ''; // this method might not be good as we can have many textfields so we'll have to make many variables that's why we'll use controllers.
-  // void _saveTitleInput(String inputValue){ // for this you don't need to setState as UI isn't changing.
-  //   _enteredTitle = inputValue;
-  // }
-  @override
+@override
   Widget build(BuildContext context) {
     final keyboardSpace = MediaQuery.of(context).viewInsets.bottom;
+
     return SingleChildScrollView(
       child: Padding(
         padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + keyboardSpace),
         child: Column(
           children: [
-            const SizedBox(
-              height: 12,
-            ),
+            const SizedBox(height: 12),
             TextField(
               controller: _titleController,
-              maxLength: 50, //setting max string length
+              maxLength: 50,
               decoration: const InputDecoration(
-                label: Text("Title"),
+label: Text("Title"),
                 border: OutlineInputBorder(),
               ),
             ),
+            const SizedBox(height: 10),
             Row(
               children: [
                 Expanded(
-                  //Same rendering issue can arise having TextField inside of a row that's why used Expanded.
                   child: TextField(
                     controller: _amountController,
-                    maxLength: 10, //setting max string length
                     keyboardType: TextInputType.number,
+                    maxLength: 10,
                     decoration: const InputDecoration(
                       prefixText: "₹ ",
-                      label: Text("Expense"),
+label: Text("Amount"),
                       border: OutlineInputBorder(),
                     ),
                   ),
                 ),
-                const SizedBox(
-                  width: 16,
-                ),
+const SizedBox(width: 16),
                 Expanded(
-                    child: Row(
-                  // we are having a row inside of a row which can cause rendering problem that's why we are using Expanded.
-                  mainAxisAlignment:
-                      MainAxisAlignment.end, // pushing icon and text to the end
-                  crossAxisAlignment: CrossAxisAlignment
-                      .center, // for centering the item vertically
-                  children: [
-                    Text(_selectedDate == null
-                        ? "No Date Selected"
-                        : formatter.format(_selectedDate!)),
-                    IconButton(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      Text(
+                        _selectedDate == null
+                            ? "No Date Selected"
+                            : formatter.format(_selectedDate!),
+                      ),
+IconButton(
                         onPressed: _presentDatePicker,
-                        icon: const Icon(Icons.calendar_month)),
-                  ],
-                ))
+                        icon: const Icon(Icons.calendar_month),
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
-            const SizedBox(
-              height: 16,
-            ),
-            Row(
-              children: [
-                DropdownButton(
-                  value: _selectedCategory,
-                  items: Category.values
-                      .map(
-                        (Category) => DropdownMenuItem(
-                          value: Category,
-                          child: Text(
-                            Category.name.toUpperCase(),
-                          ),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (value) {
-                    setState(() {
-                      _selectedCategory = value!;
-                    });
-                  },
-                ),
+const SizedBox(height: 16),
+				Row(
+				  children: [
+					DropdownButton<Category>(
+					  value: _selectedCategory,
+					  items: Category.values
+						  .map((cat) => DropdownMenuItem(
+								value: cat,
+								child: Text(cat.name.toUpperCase()),
+							  ))
+						  .toList(),
+onChanged: (newCat) {
+						setState(() => _selectedCategory = newCat!);
+					  },
+					),
                 const Spacer(),
-                TextButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                    },
-                    child: const Text("CANCEL")),
-                ElevatedButton(
+TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text("CANCEL"),
+                ),
+ElevatedButton(
+                  onPressed: _submitExpenseData,
                   style: ElevatedButton.styleFrom(
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(30),
                     ),
                   ),
-                  onPressed: () {
-                    _submitExpenseData();
-                   Navigator.pop(context);
-                  },
-                  child: const Text("SAVE"),
+                  child: Text(widget.existingExpense == null ? "SAVE" : "UPDATE"),
                 ),
-              ],
-            )
+],
+            ),
           ],
         ),
       ),
