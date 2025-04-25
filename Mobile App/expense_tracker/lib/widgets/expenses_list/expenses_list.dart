@@ -4,8 +4,9 @@ import 'package:flutter/material.dart';
 
 class ExpensesList extends StatelessWidget {
   const ExpensesList(
-      {super.key, required this.expenses, required this.onRemoveExpense});
+      {super.key, required this.expenses, required this.onRemoveExpense, required this.onEditExpense,});
   final List<Expense> expenses;
+  final void Function(Expense expense) onEditExpense;
   final void Function(Expense expense) onRemoveExpense;
 
   @override
@@ -15,7 +16,9 @@ class ExpensesList extends StatelessWidget {
     // just like recyclerView in android native.
     return ListView.builder(
       itemCount: expenses.length,
-      itemBuilder: (ctx, index) => Dismissible(// wrap the widget for dissmissible property.
+      itemBuilder: (ctx, index) {
+        final expense = expenses[index];
+        return Dismissible(
         background: Container(
           color: Theme.of(context).colorScheme.error.withOpacity(0.75), // a variation of colors are set for different aspects by default.
           margin: EdgeInsets.symmetric(
@@ -27,8 +30,11 @@ class ExpensesList extends StatelessWidget {
         //have different functionality for swiping from different directions.
           onRemoveExpense(expenses[index]);
         },
-        child: ExpenseItem(expense: expenses[index]),
-      ), // for deleting the list item by swiping
-    );
+        child: GestureDetector(
+            onTap: () => onEditExpense(expense),
+            child: ExpenseItem(expense: expense),
+          ),
+      ); // for deleting the list item by swiping
+      });
   }
 }
